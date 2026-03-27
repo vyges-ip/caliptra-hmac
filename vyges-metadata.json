@@ -1,0 +1,110 @@
+{
+  "$schema": "https://vyges.com/schema/v1/vyges-metadata.schema.json",
+  "x-version": "1.0.0",
+  "name": "caliptra-hmac",
+  "version": "0.1.0",
+  "description": "HMAC-384/512 authentication engine using masked SHA-512 core with 12 LFSR entropy generators for side-channel resistance. Supports software-written keys and Caliptra CSR key input. KeyVault integration with 2 read ports and 1 write port. AHB-Lite slave interface. Extracted from CHIPS Alliance Caliptra Root of Trust.",
+  "license": "Apache-2.0",
+  "maturity": "production",
+  "target": ["asic", "fpga"],
+  "design_type": ["digital"],
+  "created": "2026-03-27T20:52:56Z",
+  "updated": "2026-03-27T20:52:56Z",
+  "source": {
+    "type": "git",
+    "url": "https://github.com/chipsalliance/caliptra-rtl",
+    "commit": "a47402b3ac20c15c7d18f17456fb9cca56f25274",
+    "ip_path": "src/hmac",
+    "private": false,
+    "containsEncryptedPayload": false,
+    "indexing": true
+  },
+  "maintainers": [{"name": "Vyges", "email": "team@vyges.com", "url": "https://vyges.com", "github": "vyges"}],
+  "interfaces": [
+    {"type": "bus", "direction": "slave", "protocol": "AHB-Lite", "port": "ahb", "width": 32, "description": "AHB-Lite slave via hmac_ctrl wrapper. 32-bit address and data."},
+    {"type": "keyvault", "direction": "both", "protocol": "kv_read/kv_write", "port": "kv", "description": "KeyVault: 2 read ports (key + message block) and 1 write port (HMAC tag)."},
+    {"type": "sideload", "direction": "input", "protocol": "caliptra_csr", "port": "cptra_csr_hmac_key", "width": 512, "description": "Direct HMAC key input from Caliptra CSR (16 x 32-bit dwords)."},
+    {"type": "interrupt", "direction": "output", "port": "error_intr", "description": "Error interrupt (key zero, key mode error)."},
+    {"type": "interrupt", "direction": "output", "port": "notif_intr", "description": "Completion notification interrupt (cmd done)."},
+    {"type": "status", "direction": "output", "port": "busy_o", "description": "HMAC engine busy indicator."},
+    {"type": "clock", "direction": "input", "port": "clk", "description": "System clock."},
+    {"type": "reset", "direction": "input", "port": "reset_n", "polarity": "active_low", "description": "Asynchronous active-low reset."}
+  ],
+  "parameters": [
+    {"name": "ADDR_WIDTH", "type": "int", "default": 32, "description": "Address bus width."},
+    {"name": "DATA_WIDTH", "type": "int", "default": 32, "description": "Data bus width."}
+  ],
+  "performance": {
+    "key_size": 512,
+    "block_size": 1024,
+    "tag_sizes": {"HMAC-384": 384, "HMAC-512": 512},
+    "data_width": 32,
+    "hash_modes": ["HMAC-384", "HMAC-512"]
+  },
+  "architecture": {
+    "type": "peripheral",
+    "features": [
+      "HMAC-384 and HMAC-512 message authentication (RFC 2104)",
+      "Masked SHA-512 core for side-channel resistance",
+      "12 LFSR entropy generators (384-bit total entropy)",
+      "4-state FSM: IDLE, IPAD, OPAD, HMAC, DONE",
+      "Key XOR with IPAD (0x36) and OPAD (0x5C) padding",
+      "Software-written keys or CSR-provided keys",
+      "KeyVault 2-port read (key + block) and 1-port write (tag)",
+      "Zeroize on command or debug unlock",
+      "OCP lock awareness",
+      "PeakRDL-generated register file"
+    ]
+  },
+  "asic": {"flavor": "digital", "technology": ["sky130A", "GF22", "TSMC"]},
+  "fpga": {"toolchain": ["Vivado", "Quartus"], "devices": ["Artix-7", "Ultrascale+"]},
+  "dependencies": [
+    {"name": "caliptra-libs", "type": "library", "description": "AHB slave interface, clock gating, synchronizers"},
+    {"name": "caliptra-sha512-masked", "type": "core", "description": "Masked SHA-512 core (sha512_masked_core)"},
+    {"name": "keyvault", "type": "integration", "description": "KeyVault read/write clients"}
+  ],
+  "test": {
+    "testbenches": ["systemverilog", "formal", "uvmf"],
+    "status": "upstream_passing",
+    "coverage": "functional",
+    "formal_verification": "100% coverage (LUBIS EDA)",
+    "test_cases": [
+      {"name": "hmac_ctrl_tb", "description": "AHB-Lite interface testbench", "status": "passing"},
+      {"name": "hmac_formal", "description": "Formal verification: state transitions, reset, tag output. 100% coverage.", "status": "passing"},
+      {"name": "hmac_uvmf", "description": "UVM framework with directed and random regression", "status": "passing"}
+    ]
+  },
+  "documentation": {
+    "upstream": "https://github.com/chipsalliance/caliptra-rtl/tree/main/src/hmac",
+    "caliptra_spec": "https://chipsalliance.github.io/Caliptra/"
+  },
+  "artifacts": {
+    "rtl": [
+      "rtl/hmac_param_pkg.sv",
+      "rtl/hmac_reg_pkg.sv",
+      "rtl/hmac.sv",
+      "rtl/hmac_ctrl.sv",
+      "rtl/hmac_core.v",
+      "rtl/hmac_lfsr.sv",
+      "rtl/hmac_reg.sv"
+    ],
+    "total_rtl_lines": 5285
+  },
+  "categories": {
+    "primary": "security",
+    "secondary": ["crypto", "authentication"],
+    "tags": ["hmac", "sha512", "caliptra", "root-of-trust", "mac", "authentication", "masked", "keyvault", "ahb", "chips-alliance"]
+  },
+  "trust": {
+    "verification_level": "silicon_proven",
+    "tapeout_count": 1,
+    "fpga_validated": false,
+    "formal_verified": true,
+    "maintained": true,
+    "last_activity": "2026-03-27"
+  },
+  "meta": {
+    "template": {"generator": "manual (gold-standard pass 2026-03-27)", "template_version": "1.0.0", "generated_at": "2026-03-27T20:52:56Z"},
+    "schema": {"version": "1.0.0"}
+  }
+}
